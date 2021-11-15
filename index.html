@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+
+    <head>
+        <meta charset="UTF-8">
+        <meta http-equiv="X-UA-Compatible" content="IE=edge">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Annuaire ko</title>
+        
+    </head>
+
+    <body>
+        <h1>Annuaire Ko</h1>
+
+        <input type="text" data-bind="value: searchText" />
+        <button data-bind="click: handleSearch">Chercher</button>
+        <button data-bind="click: handleList">Tout</button>
+        <!-- duplique chaque entrees (tableau string) -->
+        <div data-bind="foreach: entries"> 
+            <div data-bind="text: $data"></div>
+        </div>
+        
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/knockout/3.5.0/knockout-min.js"></script>
+        <script>
+
+             class ApiService{
+                list(callback) {
+                    fetch('http://localhost:3000')
+                    .then(function(response) {
+                        return response.json();
+                    })
+                    .then(function(data) {
+                       //viewModel.transferDataToEntries(data);
+                       callback(data);
+                    });
+                }
+
+                search(text, callback) {
+                    fetch('http://localhost:3000/search', {
+                        method: 'POST',
+                        headers: {
+                            'Accept': 'application/json',
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({ 
+                            text: text
+                        })
+                    })
+                    .then(function(response) {
+                        return response.json();
+                    })
+                    .then(function(data) {
+                        callback(data);
+                    });
+                }
+             }
+
+             class ViewModel {
+
+                searchText;
+                entries;
+                apiService;
+
+                constructor(apiService) {
+                    this.apiService = apiService;
+                    this.searchText = ko.observable('');
+                    this.entries = ko.observableArray([]);
+                }
+                
+                transferDataToEntries(data) {
+                    this.entries.removeAll();
+                    for (const entry of data) {
+                        this.entries.push(Object.values(entry).join(' - '));
+                    }
+                }
+                
+                handleList() {
+                    // avant 2015
+                   // var that = this;
+                  //function qui appartient à l'objet that (callback)
+                 //this.apiService.list(function (data) => {
+                    //that.transferDataToEntries(data)
+                 //});
+                
+                  // apres 2015
+                    this.apiService.list((data) => {
+                        this.transferDataToEntries(data)
+                    });
+                       
+                 }
+                
+                handleSearch() {
+                   
+                    // d'ou vient le data? -> class ApiService-> search(text, callback)-> du parametre de la function via le fetch
+                    this.apiService.search(this.searchText(), (data) => {
+                        this.transferDataToEntries(data)
+                    });
+                 }                 
+             }
+
+            (function() {
+                const apiService = new ApiService();
+                const viewModel = new ViewModel(apiService);
+                ko.applyBindings(viewModel);
+            })();      
+
+        </script>
+    </body>
+</html>    
